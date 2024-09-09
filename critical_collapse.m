@@ -83,10 +83,10 @@ E(E<-1)=nan;
 
 figure(2)
 mesh(r,t,E);
-title('triad (E^\varphi)');
+title('triad (E^varphi)');
 xlabel('r');
 ylabel('t');
-zlabel('E^\varphi/r');
+zlabel('E^varphi');
 
 
 p(p>1)=nan;
@@ -94,7 +94,7 @@ p(p<-1)=nan;
 
 figure(3)
 mesh(r,t,p);
-title('Scalar field \phi');
+title('Scalar field phi');
 xlabel('r');
 ylabel('t');
 zlabel('\phi');
@@ -105,7 +105,7 @@ P(p<-1)=nan;
 
 figure(4)
 mesh(r,t,P);
-title('Scalar field P_\phi');
+title('Scalar field P phi');
 xlabel('r');
 ylabel('t');
 zlabel('\phi');
