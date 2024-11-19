@@ -2,8 +2,8 @@ clc;
 clear all;      %Clears the screen
 xmax=35;
 tmax=0.2;
-nx=100000;
-nt=100;
+nx=1000;
+nt=1000;
 x=linspace(0.1,xmax,nx);
 t=linspace(0,tmax,nt);
 dx=x(2)-x(1);
@@ -22,7 +22,7 @@ dNdx=zeros(nt,nx); %alpha'
 k=0;
 
 %Initial conditions
-phi0=10^(-6);
+phi0=10^(-3);
 x0=25;
 d=1.5;
 q=2;
@@ -45,44 +45,60 @@ end
 
 %%% Finite difference method %%%
 % Time cycle %
-for j=1:nt-1
+for j = 1:nt - 1
     % Radial cycle %
-    for l=1:nx-1
-        i=nx+1-l;
+    for l = 1:nx - 1
+        i = nx + 1 - l;
 
-        % k1
-        k1_dadx = -a(j,i)*((a(j,i)^2-1)/(2*x(i)) - (x(i)/2)*(P(j,i)^2*(1+k^2/a(j,i)^2) + p(j,i))^2);
-        
-        % Intermediate values
-        a_mid = a(j,i) - (dx/2) * k1_dadx;
-        k2_dadx = -a_mid*((a_mid^2-1)/(2*x(i)) - (x(i)/2)*(P(j,i)^2*(1+k^2/a_mid^2) + p(j,i))^2);
-        
-        % Update 
-        a(j,i-1) = a(j,i) - dx * k2_dadx;
-        dadx(j,i-1) = k2_dadx;
+        % RK2 for dadx equation
+        k1_dadx = -a(j,i) * ((a(j,i)^2 - 1) / (2 * x(i)) - (x(i) / 2) * (P(j,i)^2 * (1 + k^2 / a(j,i)^2) + p(j,i))^2);
+        a_mid = a(j,i) - (dx / 2) * k1_dadx;
 
-        % RK2 for N equation
-        % k1
-        k1_dNdx = -N(j,i)*((1 - a(j,i)^2)/(2*x(i)) - (x(i)/2)*(P(j,i)^2*(1 + 3*k^2/a(j,i)^2) + p(j,i))^2);
+        k2_dadx = -a_mid * ((a_mid^2 - 1) / (2 * x(i)) - (x(i) / 2) * (P(j,i)^2 * (1 + k^2 / a_mid^2) + p(j,i))^2);
 
-        % Intermediate values
-        N_mid = N(j,i) - (dx/2) * k1_dNdx;
-        k2_dNdx = -N_mid*((1 - a_mid^2)/(2*x(i)) - (x(i)/2)*(P(j,i)^2*(1 + 3*k^2/a_mid^2) + p(j,i))^2);
+        a(j,i - 1) = a(j,i) - dx * k2_dadx;
 
-        % Update N 
-        N(j,i-1) = N(j,i) - dx * k2_dNdx;
-        dNdx(j,i-1) = k2_dNdx;
+        dadx(j,i - 1) = k2_dadx;
 
-        % Update M using new value of a
-        M(j,i-1) = (1 - 1/a(j,i-1)^2) * x(i-1) / 2;
+        % RK2 for dNdx equation
+        k1_dNdx = -N(j,i) * ((1 - a(j,i)^2) / (2 * x(i)) - (x(i) / 2) * (P(j,i)^2 * (1 + 3 * k^2 / a(j,i)^2) + p(j,i))^2);
+        N_mid = N(j,i) - (dx / 2) * k1_dNdx;
+        k2_dNdx = -N_mid * ((1 - a_mid^2) / (2 * x(i)) - (x(i) / 2) * (P(j,i)^2 * (1 + 3 * k^2 / a_mid^2) + p(j,i))^2);
+        N(j,i - 1) = N(j,i) - dx * k2_dNdx;
+        dNdx(j,i - 1) = k2_dNdx;
+
+        % Update M using the new value of a
+        M(j,i - 1) = (1 - 1 / a(j,i - 1)^2) * x(i - 1) / 2;
     end
     
-    % P,p EoMs remain as is
-    for l=1:nx-1
-        i=nx+1-l;
-        p(j+1,i) = p(j,i) + (dt/dx)*(N(j,i)/a(j,i)*P(j,i)*(1 + k^2/a(j,i)^2) - N(j,i-1)/a(j,i-1)*P(j,i-1)*(1 + k^2/a(j,i-1)^2));
-        P(j+1,i) = P(j,i) + dt/(x(i)^2*dx)*(x(i)^2*N(j,i)/a(j,i)*p(j,i) - x(i-1)^2*N(j,i-1)/a(j,i-1)*p(j,i-1));
-        dpdx(j+1,i-1) = (p(j+1,i) - p(j+1,i-1)) / dx;
+    % RK2 for p and P equations
+    for l = 1:nx - 2
+        i = nx - l;
+        
+        % k1 for p and P
+        k1_p_ahead = (dt/(2 * dx))*(N(j,i + 1)/a(j,i + 1) * P(j,i + 1) * (1 + k^2 / a(j,i + 1)^2) - N(j,i) / a(j,i) * P(j,i) * (1 + k^2 / a(j,i)^2));
+        k1_P_ahead = (dt/(2 * x(i)^2 * dx)) * (x(i + 1)^2 * N(j,i + 1) / a(j,i + 1) * p(j,i + 1) - x(i)^2 * N(j,i) / a(j,i) * p(j,i));
+        
+        k1_p_behind = (dt/(2 * dx))*(N(j,i)/a(j,i) * P(j,i) * (1 + k^2 / a(j,i)^2) - N(j,i - 1) / a(j,i - 1) * P(j,i - 1) * (1 + k^2 / a(j,i - 1)^2));
+        k1_P_behind = (dt/(2 * x(i)^2 * dx)) * (x(i)^2 * N(j,i) / a(j,i) * p(j,i) - x(i - 1)^2 * N(j,i - 1) / a(j,i - 1) * p(j,i - 1));
+
+        % Intermediate values for p and P
+        p_mid_ahead = p(j,i) + k1_p_ahead / 2;
+        P_mid_ahead = P(j,i) + k1_P_ahead / 2;
+
+        p_mid_behind = p(j,i) + k1_p_behind / 2;
+        P_mid_behind = P(j,i) + k1_P_behind / 2;
+        
+        %recalculate p_mid and P_mid between (j, i + 1) (j, i) and (j, i -1) so that it isnt constant
+
+        % k2 for p and P
+        k2_p = (dt / (2 * dx)) * (N(j,i + 1) / a(j,i + 1) * P_mid_ahead * (1 + k^2 / a(j,i + 1)^2) - N(j,i - 1) / a(j,i - 1) * P_mid_behind * (1 + k^2 / a(j,i - 1)^2));
+        k2_P = (dt / (2 * x(i)^2 * dx)) * (x(i + 1)^2 * N(j,i + 1) / a(j,i + 1) * p_mid_ahead - x(i - 1)^2 * N(j,i - 1) / a(j,i - 1) * p_mid_behind);
+        
+        % Update p and P with RK2
+        p(j + 1, i) = p(j, i) + k2_p;
+        P(j + 1, i) = P(j, i) + k2_P;
+        
     end
 end
 
@@ -132,3 +148,65 @@ title('Scalar field P_\phi');
 xlabel('r');
 ylabel('t');
 zlabel('\Pi');
+
+figure(4)
+mesh(x,t,P);
+title('Scalar field P_\phi');
+xlabel('r');
+ylabel('t');
+zlabel('\Pi');
+
+% Define output file for the GIF
+outputFile = 'evolution.gif';
+
+% Set up figure
+figure;
+
+% Loop through each time slice to create frames for the GIF
+for j = 1:nt
+    % Plot p vs x at time slice j
+    subplot(2, 2, 1);
+    plot(x, p(j, :), 'LineWidth', 1.5);
+    title(['\Phi (Scalar Field) at t = ' num2str(t(j))]);
+    xlabel('x');
+    ylabel('\Phi');
+    ylim([-10, 10]); % Adjust limits as necessary for your data
+
+    % Plot P vs x at time slice j
+    subplot(2, 2, 2);
+    plot(x, P(j, :), 'LineWidth', 1.5);
+    title(['\Pi (Scalar Field) at t = ' num2str(t(j))]);
+    xlabel('x');
+    ylabel('\Pi');
+    ylim([-10, 10]); % Adjust limits as necessary for your data
+
+    % Plot N vs x at time slice j
+    subplot(2, 2, 3);
+    plot(x, N(j, :), 'LineWidth', 1.5);
+    title(['Lapse (N) at t = ' num2str(t(j))]);
+    xlabel('x');
+    ylabel('N');
+    ylim([0, 5]); % Adjust limits as necessary for your data
+
+    % Plot M vs x at time slice j
+    subplot(2, 2, 4);
+    plot(x, M(j, :), 'LineWidth', 1.5);
+    title(['Mass (M) at t = ' num2str(t(j))]);
+    xlabel('x');
+    ylabel('M');
+    ylim([-0.5, 2]); % Adjust limits as necessary for your data
+
+    % Capture the frame as an image
+    frame = getframe(gcf);
+    img = frame2im(frame);
+    [imgIndexed, cmap] = rgb2ind(img, 256);
+    
+    % Write to GIF file
+    if j == 1
+        % For the first frame, create the file
+        imwrite(imgIndexed, cmap, outputFile, 'gif', 'LoopCount', Inf, 'DelayTime', .01);
+    else
+        % For subsequent frames, append to the file
+        imwrite(imgIndexed, cmap, outputFile, 'gif', 'WriteMode', 'append', 'DelayTime', .01);
+    end
+end
